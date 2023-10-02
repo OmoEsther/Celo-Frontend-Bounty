@@ -1,7 +1,5 @@
 ﻿# CELO-FE-101
 
-![Alt text](./packages/react-app/public/demo.png "Demo")
-
 # Description
 
 This is web DApp, that allows users to be able to make reservations to nice hotels for their trips. Users pay the booking price for the hotel room and the amount is usually calculated by the number of nights the user wishes to stay in the hotel. For testing purposes a night is equivalent to 60 seconds. User's also have to pay a reservation holding fee which is then refunded back to the user after the user ends the reservation, a form of incentive to make users not hold down rooms after their reservation has ended.
@@ -24,7 +22,7 @@ This web aplication uses the following tech stack:
 # Installation
 To run the application locally, follow these steps:
 
-1. Clone the repository to your local machine using: ``` git clone https://github.com/JoE11-y/celo-fe-101.git ```
+1. Clone the repository to your local machine using: ``` git clone https://github.com/OmoEsther/Celo-Frontend-Bounty.git ```
 2. Move into react-app folder: ``` cd celo-fe-101/packages/react-app ```
 3. Install: ``` npm install ``` or ``` yarn install ```
 4. Start: ``` npm run dev ```
