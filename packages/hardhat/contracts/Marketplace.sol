@@ -12,7 +12,8 @@ interface IERC20Token {
 
 contract Marketplace {
     uint256 internal roomsLength = 0;
-    address internal cEURTokenAddress = 0x10c892A6EC43a53E45D0B916B4b7D383B1b78C0F;
+    address internal cEURTokenAddress =
+        0x10c892A6EC43a53E45D0B916B4b7D383B1b78C0F;
     uint256 public reservationFee = 1 ether;
 
     struct Room {
@@ -61,19 +62,28 @@ contract Marketplace {
         return rooms[_index];
     }
 
-    function makeReservation(uint256 _index, uint256 _noOfNights) public payable {
+    function makeReservation(
+        uint256 _index,
+        uint256 _noOfNights
+    ) public payable {
         require(!rooms[_index].isReserved, "Room is reserved");
-
+        // used minutes because this is a test environment
         uint256 noOfNightsInSeconds = _noOfNights * 1 minutes;
         uint256 bookingFee = (rooms[_index].pricePerNight * _noOfNights);
         uint256 totalFee = bookingFee + reservationFee;
 
         require(
-            IERC20Token(cEURTokenAddress).transferFrom(msg.sender, address(this), totalFee),
+            IERC20Token(cEURTokenAddress).transferFrom(
+                msg.sender,
+                address(this),
+                totalFee
+            ),
             "Token transfer failed."
         );
 
-        rooms[_index].currentReservationEnds = block.timestamp + noOfNightsInSeconds;
+        rooms[_index].currentReservationEnds =
+            block.timestamp +
+            noOfNightsInSeconds;
         rooms[_index].currentReservedTo = msg.sender;
         rooms[_index].isReserved = true;
         rooms[_index].currentBookingFee = bookingFee;
@@ -81,21 +91,32 @@ contract Marketplace {
 
     function endReservation(uint256 _index) public {
         require(rooms[_index].isReserved, "Room not reserved");
-        require(block.timestamp > rooms[_index].currentReservationEnds, "Reservation not yet ended");
         require(
-            rooms[_index].owner == msg.sender || rooms[_index].currentReservedTo == msg.sender,
+            block.timestamp > rooms[_index].currentReservationEnds,
+            "Reservation not yet ended"
+        );
+        require(
+            rooms[_index].owner == msg.sender ||
+                rooms[_index].currentReservedTo == msg.sender,
             "No access"
         );
 
-        uint256 amountToSendToOwner = rooms[_index].currentBookingFee - reservationFee;
+        uint256 amountToSendToOwner = rooms[_index].currentBookingFee -
+            reservationFee;
 
         require(
-            IERC20Token(cEURTokenAddress).transfer(rooms[_index].owner, amountToSendToOwner),
+            IERC20Token(cEURTokenAddress).transfer(
+                rooms[_index].owner,
+                amountToSendToOwner
+            ),
             "Transfer to owner failed."
         );
 
         require(
-            IERC20Token(cEURTokenAddress).transfer(rooms[_index].currentReservedTo, reservationFee),
+            IERC20Token(cEURTokenAddress).transfer(
+                rooms[_index].currentReservedTo,
+                reservationFee
+            ),
             "Transfer of reservation fee to user failed."
         );
 
