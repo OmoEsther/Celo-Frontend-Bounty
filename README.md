@@ -23,7 +23,7 @@ This web aplication uses the following tech stack:
 To run the application locally, follow these steps:
 
 1. Clone the repository to your local machine using: ``` git clone https://github.com/OmoEsther/Celo-Frontend-Bounty.git ```
-2. Move into react-app folder: ``` cd celo-fe-101/packages/react-app ```
+2. Move into react-app folder: ``` cd Celo-Frontend-Bounty/packages/react-app ```
 3. Install: ``` npm install ``` or ``` yarn install ```
 4. Start: ``` npm run dev ```
 5. Open the application in your web browser at ``` http://localhost:3000 ```
@@ -34,13 +34,6 @@ To run the application locally, follow these steps:
 3. Go to [https://faucet.celo.org/alfajores](https://faucet.celo.org/alfajores) and get tokens for the alfajores testnet.
 4. Switch to the alfajores testnet.
 5. Connect your wallet to the app.
-6. Create multiple products.
-7. Create a second account in your extension wallet.
-8. Add products to your cart
-9. Checkout from cart and pay
-10. Check balance
-11. Switch to first account and check sales
-12. Then withdraw money in sales to first account
 
 # Contributing
 1. Fork this repository
