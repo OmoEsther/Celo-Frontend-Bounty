@@ -9,7 +9,6 @@ import Room from "@/components/Room";
 import ErrorAlert from "@/components/alerts/ErrorAlert";
 import LoadingAlert from "@/components/alerts/LoadingAlert";
 import SuccessAlert from "@/components/alerts/SuccessAlert";
-import { useAccount } from "wagmi";
 
 // Define the RoomList component
 const RoomList = () => {
@@ -48,7 +47,6 @@ const RoomList = () => {
           setLoading={setLoading}
           loading={loading}
           clear={clear}
-
         />
       );
     }

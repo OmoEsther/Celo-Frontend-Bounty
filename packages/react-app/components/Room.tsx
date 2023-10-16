@@ -19,10 +19,13 @@ import { useContractCall } from "@/hooks/contract/useContractRead";
 import { useContractSend } from "@/hooks/contract/useContractWrite";
 import { useContractApprove } from "@/hooks/contract/useApprove";
 // Import icons
-import { CurrencyEuroIcon, BookmarkIcon, ClockIcon } from "@heroicons/react/24/outline";
+import {
+  CurrencyEuroIcon,
+  BookmarkIcon,
+  ClockIcon,
+} from "@heroicons/react/24/outline";
 // Import helpers
 import { Room } from "@/helpers";
-
 
 // Define the Room component which takes in the id of the room and some functions to display notifications
 const Room = ({ id, setError, setLoading, clear }: any) => {
@@ -33,10 +36,15 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
   const { openConnectModal } = useConnectModal();
   // Use the useContractCall hook to read the data of the room with the id passed in, from the marketplace contract
   const { data: rawRoom }: any = useContractCall("readRoom", [id], true);
-  const {data: reservationFee}: any = useContractCall("getReservationFee", [], true);
+  const { data: reservationFee }: any = useContractCall(
+    "getReservationFee",
+    [],
+    true
+  );
   const [room, setRoom] = useState<Room | null>(null);
+  const [amount, setAmount] = useState<string>("0");
 
-  // Format the room data that we read from the smart contract
+  // Format the room data read from the smart contract
   const getFormatRoom = useCallback(() => {
     // Room Component return null if can not get the room
     if (!rawRoom) return null;
@@ -53,7 +61,7 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
         pricePerNight: rawRoom[5],
         isReserved: rawRoom[6],
         currentReservedTo: rawRoom[7],
-        currentReservedEnds: rawRoom[8]
+        currentReservedEnds: rawRoom[8],
       });
     }
   }, [rawRoom, id]);
@@ -64,52 +72,44 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
   }, [getFormatRoom]);
 
   // Use the useContractSend hook to make reservation for the room with the id passed in, via the marketplace contract
-  const { writeAsync: makeReservation, isSuccess: isSuccessMakeReservation } = useContractSend(
-    "makeReservation",
-    [Number(id), Number(noOfNights)]
-  );
+  const { writeAsync: makeReservation, isSuccess: isSuccessMakeReservation } =
+    useContractSend("makeReservation", [Number(id), Number(noOfNights)]);
 
-  const { writeAsync: endReservation, isSuccess: isSuccessEndReservation } = useContractSend(
-    "endReservation",
-    [Number(id)]
-  );
+  const { writeAsync: endReservation, isSuccess: isSuccessEndReservation } =
+    useContractSend("endReservation", [Number(id)]);
 
-  const amount = room?.pricePerNight?.add(BigNumber.from(reservationFee.toString())).toString();
+  // Use the useContractApprove hook to approve the spending of the product's price, for the ERC20 cEUR contract
+  const { writeAsync: approve } = useContractApprove(amount || "0");
 
-  // Use the useContractApprove hook to approve the spending of the product's price, for the ERC20 cUSD contract
-  const { writeAsync: approve } = useContractApprove(
-    amount || "0"
-  );
-
-  // Define the handlePurchase function which handles the purchase interaction with the smart contract
+  // Define the handleReservation function which handles the make reservation interaction with the smart contract
   const handleReservation = async () => {
     if (!approve || !makeReservation) {
       throw "Failed to make reservation for this room";
     }
-    // Approve the spending of the product's price, for the ERC20 cUSD contract
+    // Approve the spending of the room's resrervation fee + booking fee, for the ERC20 cEUR contract
     const approveTx = await approve();
     // Wait for the transaction to be mined, (1) is the number of confirmations we want to wait for
     await approveTx.wait(1);
     setLoading("Purchasing...");
-    // Once the transaction is mined, purchase the product via our marketplace contract buyProduct function
+    // Once the transaction is mined, make the reservation for the room via our marketplace contract makeReservation function
     const res = await makeReservation();
     // Wait for the transaction to be mined
     await res.wait();
   };
 
-  // Define the handlePurchase function which handles the purchase interaction with the smart contract
+  // Define the handleEndReservation function which handles the end reservation interaction with the smart contract
   const handleEndReservation = async () => {
     if (!endReservation) {
       throw "Failed to end reservation this room";
     }
     setLoading("Purchasing...");
-    // Once the transaction is mined, purchase the product via our marketplace contract buyProduct function
+    // Once the transaction is mined, end the reservation for the room via our marketplace contract endReservaion function.
     const res = await endReservation();
     // Wait for the transaction to be mined
     await res.wait();
   };
 
-  // Define the purchaseProduct function that is called when the user clicks the purchase button
+  // Define the reserveRoom function that is called when the user clicks the book room button
   const reserveRoom = async () => {
     setLoading();
     clear();
@@ -120,7 +120,7 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
         openConnectModal();
         return;
       }
-      // If the user is connected, call the handlePurchase function and display a notification
+      // If the user is connected, call the handleReservation function and display a notification
       await toast.promise(handleReservation(), {
         pending: "Reserving room...",
         success: "Room reserved successfully",
@@ -134,11 +134,12 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
       // Once the purchase is complete, clear the loading state
     } finally {
       setLoading(null);
+      setNoOfNights(0);
       clear();
     }
   };
 
-  // Define the purchaseProduct function that is called when the user clicks the purchase button
+  // Define the endRoomReservation function that is called when the user clicks the end reservation button
   const endRoomReservation = async () => {
     setLoading();
     clear();
@@ -149,7 +150,7 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
         openConnectModal();
         return;
       }
-      // If the user is connected, call the handlePurchase function and display a notification
+      // If the user is connected, call the handleEndReservation function and display a notification
       await toast.promise(handleEndReservation(), {
         pending: "Ending room reservation...",
         success: "Reservation ended successfully",
@@ -168,29 +169,45 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
   };
 
   // If the room cannot be loaded, return null
-  if (!room) return null;    
+  if (!room) return null;
 
-  // Format the price of the room from wei to cUSD otherwise the price will be way too high
+  // Format the price of the room from wei to cEUR otherwise the price will be way too high
   const roomPriceFromWei = ethers.utils.formatEther(
     room.pricePerNight.toString()
   );
-  
+
   const reservationPriceFromWei = ethers.utils.formatEther(
     reservationFee.toString()
   );
-  
-  const reservationEnded = () => Date.now() >= new Date(Number(room.currentReservedEnds.toString()) * 1000).getTime();
 
+  const reservationEnded = () =>
+    Date.now() >=
+    new Date(Number(room.currentReservedEnds.toString()) * 1000).getTime();
+
+  // function to handle form action based on state
   const handleActions = (e: any) => {
     e.preventDefault();
     if (room.isReserved && reservationEnded()) {
-      if (room.currentReservedTo == address){
+      if (room.currentReservedTo == address) {
         endRoomReservation();
       }
-    }else{
+    } else {
       reserveRoom();
     }
-  }
+  };
+
+  // function to calculate total amount
+  const handleOnChange = (e: any) => {
+    e.preventDefault();
+    // update no of nights
+    setNoOfNights(Number(e.target.value));
+    // calculate bookingFee
+    const bookingFee = room?.pricePerNight?.mul(BigNumber.from(e.target.value));
+    // calculate totalFee
+    const totalFee = bookingFee.add(BigNumber.from(reservationFee.toString()));
+    // update amount
+    setAmount(totalFee.toString());
+  };
 
   // Return the JSX for the room component
   return (
@@ -203,7 +220,7 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
               "absolute z-10 left-0 mt-4 bg-amber-400 text-black p-1 rounded-r-lg px-4"
             }
           >
-            {room.isReserved? "RESERVED" : "AVAILABLE"}
+            {room.isReserved ? "RESERVED" : "AVAILABLE"}
           </span>
           {/* Show the room image */}
           <img
@@ -226,9 +243,7 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
             <p className="mt-4 pt-4 text-2xl font-bold">{room.name}</p>
             <div className={"h-24 overflow-y-hidden scrollbar-hide"}>
               {/* Show the room description */}
-              <h3 className="mt-4 text-sm text-gray-700">
-                {room.description}
-              </h3>
+              <h3 className="mt-4 text-sm text-gray-700">{room.description}</h3>
             </div>
           </div>
 
@@ -240,34 +255,50 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
                 <h3 className="pt-1 text-sm text-gray-700">{room.location}</h3>
               </div>
               <div className={"flex flex-row "}>
-                <CurrencyEuroIcon className="block h-6 w-6" aria-hidden="true" />
-                <h3 className="pt-1 text-sm text-gray-700">{roomPriceFromWei} cEUR</h3>
+                <CurrencyEuroIcon
+                  className="block h-6 w-6"
+                  aria-hidden="true"
+                />
+                <h3 className="pt-1 text-sm text-gray-700">
+                  {roomPriceFromWei} cEUR
+                </h3>
               </div>
             </div>
 
-             {/* Show Reservation Data */}
+            {/* Show Reservation Data */}
             <div className="pt-1 text-sm text-gray-700">
               <span className="mt-4 flex flex-row">
-                <BookmarkIcon className="block h-6 w-6" aria-hidden="true" /> Reserved To:&nbsp;{          
-                <Link
-                  href={`https://explorer.celo.org/alfajores/address/${room.currentReservedTo}`}
-                >
-                  {room.currentReservedTo == "0x5ea1BB2149129E599Ae6a7C1849Fe044135b04d2"? "Market"  : truncateAddress(room.currentReservedTo)}
-                </Link>}
+                <BookmarkIcon className="block h-6 w-6" aria-hidden="true" />{" "}
+                Reserved To:&nbsp;
+                {
+                  <Link
+                    href={`https://explorer.celo.org/alfajores/address/${room.currentReservedTo}`}
+                  >
+                    {room.currentReservedTo ==
+                    "0x5ea1BB2149129E599Ae6a7C1849Fe044135b04d2"
+                      ? "Market"
+                      : truncateAddress(room.currentReservedTo)}
+                  </Link>
+                }
               </span>
               <span className="mt-4 flex flex-row">
-                <ClockIcon className="block h-6 w-6" aria-hidden="true" /> Reservation ends:&nbsp;
-                {room.isReserved ? ` ${formatTime(Number(room.currentReservedEnds.toString()))}` : "--:--"}
+                <ClockIcon className="block h-6 w-6" aria-hidden="true" />{" "}
+                Reservation ends:&nbsp;
+                {room.isReserved
+                  ? ` ${formatTime(
+                      Number(room.currentReservedEnds.toString())
+                    )}`
+                  : "--:--"}
               </span>
             </div>
             <form onSubmit={handleActions}>
-                <div
-                  className="inline-block align-center text-left transform transition-all sm:align-middle sm:max-w-lg sm:w-full">
-                  {/* Input fields for the room */}
-                  <div className="px-4 pb-4 sm:p-6 sm:pb-4">
-                    { !room.isReserved && <input
+              <div className="inline-block align-center text-left transform transition-all sm:align-middle sm:max-w-lg sm:w-full">
+                {/* Input fields for the room */}
+                <div className="px-4 pb-4 sm:p-6 sm:pb-4">
+                  {!room.isReserved && (
+                    <input
                       onChange={(e) => {
-                        setNoOfNights(Number(e.target.value));
+                        handleOnChange(e);
                       }}
                       required
                       type="number"
@@ -275,19 +306,31 @@ const Room = ({ id, setError, setLoading, clear }: any) => {
                       className="w-full bg-gray-100 p-2 mt-2 mb-3"
                       placeholder="no of nights"
                       min={1}
-                    /> }
-                    <button
-                      type="submit"
-                      disabled={(address == room.owner && reservationEnded()) || !reservationEnded()}
-                      className="mt-4 h-14 w-full border-[1px] border-gray-500 text-black p-2 rounded-lg hover:bg-black hover:text-white disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed"
-                      >
-                      {/* Show the room price in cEUR */}
-                      {address !== room.owner
-                        ? room.isReserved? room.currentReservedTo == address ? "End Reservation" : "Room Reserved" : `Book Room for ${(Number(roomPriceFromWei) * noOfNights) + Number(reservationPriceFromWei)} cEUR`
-                        : "You can't book your room"}
-                    </button>
-                  </div>
+                    />
+                  )}
+                  <button
+                    type="submit"
+                    disabled={
+                      (address == room.owner && reservationEnded()) ||
+                      !reservationEnded()
+                    }
+                    className="mt-4 h-14 w-full border-[1px] border-gray-500 text-black text-sm p-2 rounded-lg hover:bg-black hover:text-white disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed"
+                  >
+                    {/* Show the room price in cEUR */}
+                    {address !== room.owner
+                      ? room.isReserved
+                        ? room.currentReservedTo == address
+                          ? "End Reservation"
+                          : "Room Reserved"
+                        : noOfNights == 0
+                        ? "Select No of Nights"
+                        : `Book Room for ${
+                            Number(roomPriceFromWei) * noOfNights
+                          } cEUR + R fee`
+                      : "You can't book your room"}
+                  </button>
                 </div>
+              </div>
             </form>
           </div>
         </div>
