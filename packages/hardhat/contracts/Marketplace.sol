@@ -3,7 +3,7 @@
 // Version of Solidity compiler this program was written for
 pragma solidity >=0.7.0 <0.9.0;
 
-// Interface for the ERC20 token, in our case cUSD
+// Interface for the ERC20 token, in our case cEUR
 interface IERC20Token {
     // Transfers tokens from one address to another
     function transfer(address, uint256) external returns (bool);
