@@ -1,4 +1,4 @@
-﻿# CELO-FE-101
+﻿# Celo-Frontend-Bounty
 
 ## Description
 
@@ -7,6 +7,8 @@ This is web DApp, that allows users to be able to make reservations to nice hote
 - Users pay the booking price for the hotel room and the amount is usually calculated by the number of nights the user wishes to stay in the hotel.
 - User's also have to pay a reservation holding fee which is then refunded back to the user after the user ends the reservation. This is a form of incentive to make users not hold down rooms after their reservation has ended.
 - For testing purposes a night is equivalent to 60 seconds.
+
+        i.e 30 nights = 30 minutes
 
 ## Feature
 
